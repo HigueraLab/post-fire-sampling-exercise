@@ -1,6 +1,6 @@
 # Post-fire Sampling Exercise
 
-An interactive exercise for **FORS 333: Fire Ecology** at the University of Montana. Students use field data they collected in the 2017 Lolo Peak Fire to see how to summarize a site, how sample size affects the mean and its standard error, and whether fewer transects can still detect change between years.
+An interactive exercise for **FORS 333: Fire Ecology** at the University of Montana. Students use field data  collected in the footprint of the 2017 Lolo Peak Fire to see how to summarize a site, how sample size affects the mean and its standard error, and whether fewer transects can still detect change between years.
 
 **Open the exercise:** https://higueralab.github.io/post-fire-sampling-exercise/
 
