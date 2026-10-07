@@ -1,0 +1,385 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lolo Peak Sampling Exercise</title>
+<meta name="description" content="Three interactive views of FORS 333 class data from the Lolo Peak Fire: summarizing 16 plots, what happens with fewer plots, and detecting change between years.">
+<style>
+/* Layout: three tabs; each has a control column (left) and plots (right); stacks to one column on narrow screens. */
+:root{
+  --bg:#F5F6F5; --panel:#FFFFFF; --fg:#111312; --muted:#4A5451; --line:#C3CBC8;
+  --accent:#0000CC; --sd:#8A5A00; --range:#4F5A57; --alert:#B3261E; --fill:#D9E0DD; --hi:#0000CC;
+  --font:Arial, "Helvetica Neue", Helvetica, sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#121514; --panel:#1B1F1E; --fg:#ECEFEE; --muted:#AEB8B4; --line:#3B4442;
+    --accent:#A3B4FF; --sd:#E6B655; --range:#B7C2BE; --alert:#FF8F85; --fill:#2E3735; --hi:#A3B4FF;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#121514; --panel:#1B1F1E; --fg:#ECEFEE; --muted:#AEB8B4; --line:#3B4442;
+  --accent:#A3B4FF; --sd:#E6B655; --range:#B7C2BE; --alert:#FF8F85; --fill:#2E3735; --hi:#A3B4FF;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{font-size:17px}
+body{background:var(--bg);color:var(--fg);font-family:var(--font);line-height:1.45;padding-inline:16px;padding-block:20px 48px;margin:0}
+.wrap{max-width:1240px;margin:0 auto;display:grid;gap:20px}
+.skip{position:absolute;left:-9999px}
+.skip:focus{left:16px;top:8px;background:var(--panel);color:var(--fg);padding:8px 12px;border:2px solid var(--accent);z-index:10}
+header{display:grid;gap:6px}
+.eyebrow{font-size:.8rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+h1{font-size:2rem;margin:0;line-height:1.15;text-wrap:balance}
+h2{font-size:1.35rem;margin:0;text-wrap:balance}
+h3{font-size:1.05rem;margin:0}
+.lede{margin:0;max-width:75ch;color:var(--muted)}
+.tabs{display:flex;flex-wrap:wrap;gap:6px;border-bottom:2px solid var(--line)}
+.tabs button{font:inherit;font-weight:700;background:transparent;color:var(--muted);border:2px solid transparent;border-bottom:none;padding:10px 14px;border-radius:6px 6px 0 0;cursor:pointer;margin-bottom:-2px}
+.tabs button[aria-selected="true"]{background:var(--panel);color:var(--fg);border-color:var(--line);border-bottom:2px solid var(--panel)}
+.tabs .num{color:var(--accent);margin-right:6px}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.bench{display:grid;grid-template-columns:minmax(260px,330px) minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:880px){.bench{grid-template-columns:minmax(0,1fr)}}
+.side,.plots{display:grid;gap:16px;min-width:0}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px 16px;display:grid;grid-template-columns:minmax(0,1fr);gap:10px;min-width:0}
+.card p{margin:0}
+fieldset{border:none;margin:0;padding:0;display:grid;gap:6px}
+legend{font-weight:700;padding:0;margin-bottom:6px}
+.seg{display:flex;flex-wrap:wrap;gap:4px}
+.seg label{position:relative}
+.seg input{position:absolute;opacity:0;inset:0;margin:0;cursor:pointer}
+.seg span{display:inline-block;min-width:44px;text-align:center;padding:7px 10px;border:2px solid var(--line);border-radius:6px;font-weight:700;font-variant-numeric:tabular-nums}
+.seg input:checked + span{border-color:var(--accent);color:var(--accent);background:var(--bg)}
+.seg input:focus-visible + span{outline:3px solid var(--accent);outline-offset:2px}
+.checks{display:grid;gap:6px}
+.checks label{display:flex;gap:8px;align-items:center;font-weight:700}
+.checks input{width:20px;height:20px}
+.btns{display:flex;flex-wrap:wrap;gap:8px}
+.btn{font:inherit;font-weight:700;padding:9px 14px;border-radius:6px;border:2px solid var(--accent);background:var(--accent);color:var(--panel);cursor:pointer}
+.btn.ghost{background:transparent;color:var(--accent)}
+select{font:inherit;padding:6px 8px;border:2px solid var(--line);border-radius:6px;background:var(--panel);color:var(--fg)}
+.row{display:flex;flex-wrap:wrap;gap:12px;align-items:end}
+.row label{display:grid;gap:4px;font-weight:700}
+dl.read{display:grid;grid-template-columns:auto auto;justify-content:start;column-gap:14px;row-gap:3px;margin:0;font-variant-numeric:tabular-nums}
+dl.read dt{color:var(--muted)}
+dl.read dd{margin:0;font-weight:700}
+.k-sd{color:var(--sd)} .k-se{color:var(--accent)} .k-range{color:var(--range)} .k-alert{color:var(--alert)}
+.sub{font-size:.85rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+canvas{display:block;width:100%;max-width:100%;min-width:0;background:var(--panel)}
+.h-strip{height:300px}.h-crew{height:200px}.h-hist{height:260px}.h-cmp{height:340px}.h-pow{height:260px}
+.note{border-left:4px solid var(--accent);padding:4px 0 4px 12px;display:grid;gap:8px}
+.note ul,.note ol{margin:0;padding-left:1.2em;display:grid;gap:6px}
+.big{font-size:1.2rem;font-weight:700;font-variant-numeric:tabular-nums}
+footer{color:var(--muted);font-size:.9rem;max-width:90ch}
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to the demos</a>
+<div class="wrap">
+<header>
+  <div class="eyebrow">FORS 333 | Fire Ecology | Lolo Peak Fire class data</div>
+  <h1>Lolo Peak Sampling Exercise</h1>
+  <p class="lede">Your class data, three ways. Each site (LP_H, LP_M) is characterized by a sample of sampling units: belt transects through 2025, plots in 2026. The sample size, n, is the number of transects or plots. Here: how to summarize a site, what happens to the mean and its uncertainty with a smaller n, and whether a smaller n could still detect a change between years.</p>
+</header>
+
+<nav class="tabs" role="tablist" aria-label="Demos">
+  <button role="tab" id="t-summarize" aria-controls="p-summarize" aria-selected="true"><span class="num">1</span>Summarize 16 plots</button>
+  <button role="tab" id="t-fewer" aria-controls="p-fewer" aria-selected="false" tabindex="-1"><span class="num">2</span>Fewer plots?</button>
+  <button role="tab" id="t-change" aria-controls="p-change" aria-selected="false" tabindex="-1"><span class="num">3</span>Detect a change?</button>
+</nav>
+
+<main id="main">
+<!-- ===== 1. SUMMARIZE ===== -->
+<section role="tabpanel" id="p-summarize" aria-labelledby="t-summarize" class="bench">
+  <div class="side">
+    <div class="card">
+      <h2>Summarize 16 plots</h2>
+      <p>Live seedling density in the plots (1-m radius) the class sampled at LP_H in 2026. Each circle is one plot, the sampling unit; the sample size is n = 16 plots.</p>
+      <fieldset class="checks"><legend>Show</legend>
+        <label><input type="checkbox" id="c-mean" checked> Mean</label>
+        <label><input type="checkbox" id="c-median"> Median</label>
+        <label class="k-range"><input type="checkbox" id="c-range"> Range</label>
+        <label class="k-sd"><input type="checkbox" id="c-sd"> Mean ± 1 SD</label>
+        <label class="k-se"><input type="checkbox" id="c-se"> Mean ± 2 SE</label>
+      </fieldset>
+    </div>
+    <div class="card" aria-live="polite">
+      <div class="sub">Summaries (seedlings/m²)</div>
+      <dl class="read" id="sumtab"></dl>
+    </div>
+    <div class="card note">
+      <h3>What each one tells you</h3>
+      <ul>
+        <li><b>Mean and median:</b> two measures of a typical plot. They are close here, so the data are roughly symmetric.</li>
+        <li><b>Range and SD:</b> how much plots differ from each other. More plots will not make them shrink.</li>
+        <li><b>SE:</b> how uncertain the site mean is. SE = SD / √n, where n is the number of plots, so it shrinks with more plots. Error bars in your figures are ±2 SE.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="plots">
+    <div class="card">
+      <h3>LP_H, 2026: seedlings/m² in each plot</h3>
+      <canvas id="cv-strip" class="h-strip" role="img"></canvas>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 2. FEWER PLOTS ===== -->
+<section role="tabpanel" id="p-fewer" aria-labelledby="t-fewer" class="bench" hidden>
+  <div class="side">
+    <div class="card">
+      <h2>Fewer plots?</h2>
+      <p>What if the class had characterized LP_H with fewer plots? Each sample draws <b>n</b> plots at random from our 16 (with replacement, so a plot can be drawn twice), treating the 16 as stand-ins for the whole site.</p>
+      <fieldset class="seg" id="f-k"><legend>Sample size: plots per sample (n)</legend></fieldset>
+      <div class="btns">
+        <button class="btn" id="f-one">Draw 1 sample</button>
+        <button class="btn ghost" id="f-hund">Draw 100</button>
+        <button class="btn ghost" id="f-thou">Draw 1,000</button>
+        <button class="btn ghost" id="f-clear">Clear</button>
+      </div>
+    </div>
+    <div class="card" aria-live="polite">
+      <div class="sub">Latest sample</div>
+      <dl class="read">
+        <dt>Mean</dt><dd id="f-m"></dd>
+        <dt class="k-sd">SD</dt><dd id="f-sd" class="k-sd"></dd>
+        <dt class="k-se">SE = SD/√n</dt><dd id="f-se" class="k-se"></dd>
+      </dl>
+      <div class="sub">All samples so far</div>
+      <dl class="read">
+        <dt>Samples</dt><dd id="f-n"></dd>
+        <dt>SD of sample means</dt><dd id="f-sdm"></dd>
+        <dt>Predicted, SD/√n</dt><dd id="f-pred"></dd>
+        <dt>±2 SE includes 6.90</dt><dd id="f-cov"></dd>
+      </dl>
+    </div>
+    <div class="card note">
+      <h3>Predict, then click</h3>
+      <ol>
+        <li>With n = 4 plots instead of 16, will a sample's mean be farther from 6.90? About how much wider will its ±2 SE bar be?</li>
+        <li>Single plots are lumpy, not bell-shaped. Will the sample means be?</li>
+      </ol>
+      <p>Halving n does not halve your certainty: SE grows with 1/√n. And means of several plots pile up in a bell shape even when single plots do not (the central limit theorem).</p>
+    </div>
+  </div>
+  <div class="plots">
+    <div class="card">
+      <h3>The latest sample's plots (filled) and its mean ± 2 SE</h3>
+      <canvas id="cv-crew" class="h-crew" role="img"></canvas>
+    </div>
+    <div class="card">
+      <h3>Means from every sample, with the normal curve predicted by SD/√n</h3>
+      <canvas id="cv-hist" class="h-hist" role="img"></canvas>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 3. DETECT A CHANGE ===== -->
+<section role="tabpanel" id="p-change" aria-labelledby="t-change" class="bench" hidden>
+  <div class="side">
+    <div class="card">
+      <h2>Detect a change?</h2>
+      <p>Fine litter cover (&lt;7.6 cm) at LP_H. The sampling unit is the belt transect (one value per transect, the average of its two cover circles); n is the number of transects. What if the class had sampled fewer transects each year?</p>
+      <div class="row">
+        <label for="d-a">First year <select id="d-a"></select></label>
+        <label for="d-b">Second year <select id="d-b"></select></label>
+      </div>
+      <fieldset class="seg" id="d-m"><legend>Sample size: transects per year (n)</legend></fieldset>
+      <div class="btns">
+        <button class="btn" id="d-draw">Draw a subset</button>
+      </div>
+    </div>
+    <div class="card" aria-live="polite">
+      <div class="sub">±2 SE bars separate?</div>
+      <dl class="read">
+        <dt>All transects</dt><dd id="d-full"></dd>
+        <dt>This subset</dt><dd id="d-sub"></dd>
+        <dt>Across 1,000 subsets</dt><dd id="d-rate"></dd>
+      </dl>
+    </div>
+    <div class="card note">
+      <h3>Predict, then click</h3>
+      <ol>
+        <li>Compare 2018 with 2025. With all transects, do the ±2 SE bars separate? Would they with only 3 transects per year?</li>
+        <li>Now compare 2024 with 2025. Does sampling fewer transects ever make a difference appear?</li>
+      </ol>
+      <p>A smaller n (fewer transects) means wider error bars, so real changes are missed more often. With very few transects, SE itself is unreliable, and an occasional subset shows a "difference" that the full data do not.</p>
+    </div>
+  </div>
+  <div class="plots">
+    <div class="card">
+      <h3>Transects (open), this subset (filled), and mean ± 2 SE</h3>
+      <canvas id="cv-cmp" class="h-cmp" role="img"></canvas>
+    </div>
+    <div class="card">
+      <h3>How often would you detect this change? (1,000 subsets per point)</h3>
+      <canvas id="cv-pow" class="h-pow" role="img"></canvas>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer>
+  <p><b>About the data.</b> Tab 1 and 2: live seedlings (all species) per plot, LP_H, 2026, from LoloPeakFire_FieldData_2026_CLEANED.xlsx; absent species count as zero. Tab 3: fine litter cover per belt transect, LP_H, 2018 to 2025, from the COMBINED workbook; 2020 and 2021 were not sampled, and one 2023 transect has a single cover circle. Sampling units: plots (2026) and belt transects (2018 to 2025); n is the number of plots or transects characterizing a site. Tab 2 samples draw plots with replacement from the 16 (a bootstrap); tab 3 subsets draw transects without replacement from each year. “Bars separate” means the ±2 SE bars do not overlap, the course rule for a significant difference.</p>
+</footer>
+</div>
+
+<script>
+(function(){
+"use strict";
+const DATA={
+  seed2026:[11.7775,9.231,7.6394,1.2732,5.7296,9.5493,10.1859,1.5915,14.0056,8.5944,5.093,1.5915,4.4563,6.3662,5.4113,7.9577],
+  litter:{"2018":[3,5.5,2.75,1.5,5,0.5,3,1],"2019":[2.5,5,10,3.5,11,5,22.5,7.5],"2022":[5.5,1.5,2.5,7.5,7.5,22.5,65],
+          "2023":[3,5,1,30,27.5,7.5,17.5,37.5],"2024":[10,25,25,10,17.5,20,5.5,0,7.5,7.5],"2025":[30,5,15,7.5,15,12.5,5,20,12.5,17.5]}
+};
+/* ---------- helpers ---------- */
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+const rand=mulberry32(2026);
+const mean=a=>a.reduce((s,x)=>s+x,0)/a.length;
+const sd=a=>{if(a.length<2)return NaN;const m=mean(a);return Math.sqrt(a.reduce((s,x)=>s+(x-m)*(x-m),0)/(a.length-1));};
+const se=a=>sd(a)/Math.sqrt(a.length);
+const median=a=>{const s=[...a].sort((x,y)=>x-y),n=s.length;return n%2?s[(n-1)/2]:(s[n/2-1]+s[n/2])/2;};
+const f=(x,d=2)=>Number.isFinite(x)?x.toFixed(d):"n/a";
+const $=id=>document.getElementById(id);
+function sample(a,k,repl){if(repl){const out=[],idx=[];for(let i=0;i<k;i++){const j=Math.floor(rand()*a.length);idx.push(j);out.push(a[j]);}return{v:out,idx};}
+  const idx=[...a.keys()];for(let i=idx.length-1;i>0;i--){const j=Math.floor(rand()*(i+1));[idx[i],idx[j]]=[idx[j],idx[i]];}const sel=idx.slice(0,k);return{v:sel.map(i=>a[i]),idx:sel};}
+function bars(a){const m=mean(a),e=se(a);return{m,lo:m-2*e,hi:m+2*e};}
+function separate(a,b){const A=bars(a),B=bars(b);if(!Number.isFinite(A.lo)||!Number.isFinite(B.lo))return false;return A.hi<B.lo||B.hi<A.lo;}
+
+let C={};
+function readColors(){const s=getComputedStyle(document.documentElement);["fg","muted","line","accent","sd","range","alert","fill","panel","hi"].forEach(k=>C[k]=s.getPropertyValue("--"+k).trim());C.font=s.getPropertyValue("--font").trim();}
+function prep(cv){const dpr=window.devicePixelRatio||1,w=cv.clientWidth,h=cv.clientHeight;const W=Math.round(w*dpr),H=Math.round(h*dpr);
+  if(cv.width!==W||cv.height!==H){cv.width=W;cv.height=H;}const g=cv.getContext("2d");g.setTransform(dpr,0,0,dpr,0,0);g.clearRect(0,0,w,h);g.fillStyle=C.panel;g.fillRect(0,0,w,h);g.font="15px "+C.font;return{g,w,h};}
+const lin=(d0,d1,r0,r1)=>{const s=v=>r0+(v-d0)*(r1-r0)/(d1-d0);s.d=[d0,d1];return s;};
+function ticks(lo,hi,n){const st0=(hi-lo)/n,mg=Math.pow(10,Math.floor(Math.log10(st0))),e=st0/mg;const st=(e>=7.5?10:e>=3.5?5:e>=1.5?2:1)*mg;const o=[];for(let v=Math.ceil(lo/st-1e-9)*st;v<=hi+1e-9;v+=st)o.push(+v.toFixed(10));o.dec=Math.max(0,-Math.floor(Math.log10(st)+1e-9));return o;}
+function xAxis(g,x,y,label){const px=Math.abs(x(x.d[1])-x(x.d[0]));const t=ticks(x.d[0],x.d[1],Math.max(3,Math.min(8,Math.floor(px/70))));g.strokeStyle=C.line;g.lineWidth=1;g.beginPath();g.moveTo(x(x.d[0]),y);g.lineTo(x(x.d[1]),y);g.stroke();
+  g.fillStyle=C.muted;g.textAlign="center";g.textBaseline="top";t.forEach(v=>{g.beginPath();g.moveTo(x(v),y);g.lineTo(x(v),y+5);g.stroke();g.fillText(v.toFixed(t.dec),x(v),y+8);});
+  if(label){g.fillStyle=C.fg;g.fillText(label,(x(x.d[0])+x(x.d[1]))/2,y+28);}}
+function yAxis(g,y,x,x1,label,n){const t=ticks(y.d[0],y.d[1],n||5);g.lineWidth=1;g.textAlign="right";g.textBaseline="middle";
+  t.forEach(v=>{g.strokeStyle=C.line;g.globalAlpha=.45;g.beginPath();g.moveTo(x,y(v));g.lineTo(x1,y(v));g.stroke();g.globalAlpha=1;g.fillStyle=C.muted;g.fillText(v.toFixed(t.dec),x-8,y(v));});
+  g.strokeStyle=C.line;g.beginPath();g.moveTo(x,y(y.d[0]));g.lineTo(x,y(y.d[1]));g.stroke();
+  if(label){g.save();g.translate(16,(y(y.d[0])+y(y.d[1]))/2);g.rotate(-Math.PI/2);g.textAlign="center";g.textBaseline="middle";g.fillStyle=C.fg;g.fillText(label,0,0);g.restore();}}
+function hbar(g,x,lo,hi,y,col,lw,cap){g.strokeStyle=col;g.lineWidth=lw;g.beginPath();g.moveTo(x(lo),y);g.lineTo(x(hi),y);g.stroke();g.lineWidth=2.5;[lo,hi].forEach(v=>{g.beginPath();g.moveTo(x(v),y-cap);g.lineTo(x(v),y+cap);g.stroke();});}
+function vbar(g,x,y,lo,hi,col,cap,lw){g.strokeStyle=col;g.lineWidth=lw||3;g.beginPath();g.moveTo(x,y(lo));g.lineTo(x,y(hi));g.stroke();g.lineWidth=2.5;[lo,hi].forEach(v=>{g.beginPath();g.moveTo(x-cap,y(v));g.lineTo(x+cap,y(v));g.stroke();});}
+function seg(id,values,initial,onChange,labelFn){const fs=$(id);values.forEach(v=>{const l=document.createElement("label"),i=document.createElement("input"),s=document.createElement("span");
+  i.type="radio";i.name=id;i.value=v;i.id=id+"-"+v;if(v===initial)i.checked=true;i.addEventListener("change",()=>onChange(v));s.textContent=labelFn?labelFn(v):v;l.append(i,s);fs.append(l);});}
+function jitterY(i){return [0,-1,1,-0.5,0.5,-1.5,1.5,0][i%8];}
+
+/* ===== 1. SUMMARIZE ===== */
+const P=DATA.seed2026, PM=mean(P), PSD=sd(P), PSE=se(P), PMED=median(P);
+function renderSum(){
+  const rows=[["n (plots)",P.length,0],["Mean",PM],["Median",PMED],["Lowest",Math.min(...P)],["Highest",Math.max(...P)],["SD",PSD],["SE",PSE],["2 SE",2*PSE]];
+  $("sumtab").innerHTML=rows.map(([k,v,d])=>`<dt>${k}</dt><dd>${typeof v==="number"?f(v,d===0?0:2):v}</dd>`).join("");
+  const cv=$("cv-strip"),{g,w,h}=prep(cv);const L=24,R=24,B=60;const x=lin(0,15,L,w-R);
+  xAxis(g,x,h-B,"Live seedling density (seedlings/m²), one plot");
+  const yd=h-B-40;g.strokeStyle=C.fg;g.lineWidth=2;
+  [...P.keys()].sort((a,b)=>P[a]-P[b]).forEach((i,r)=>{g.beginPath();g.arc(x(P[i]),yd+jitterY(r)*9,7,0,2*Math.PI);g.stroke();});
+  let yy=40;const items=[];
+  if($("c-range").checked)items.push(["range",Math.min(...P),Math.max(...P),C.range,"range: lowest to highest plot"]);
+  if($("c-sd").checked)items.push(["sd",PM-PSD,PM+PSD,C.sd,"mean ± 1 SD: spread of plots"]);
+  if($("c-se").checked)items.push(["se",PM-2*PSE,PM+2*PSE,C.accent,"mean ± 2 SE: uncertainty of the mean"]);
+  g.font="bold 15px "+C.font;
+  items.forEach(([,lo,hi,col,lab],k)=>{const y=yy+k*44;hbar(g,x,lo,hi,y,col,6,10);g.fillStyle=col;g.textAlign="left";g.textBaseline="bottom";
+    const tx=Math.min(x(lo),w-R-g.measureText(lab).width);g.fillText(lab,Math.max(L,tx),y-10);});
+  g.font="15px "+C.font;
+  const lines=[];if($("c-mean").checked)lines.push([PM,"mean "+f(PM),[8,5],"right"]);if($("c-median").checked)lines.push([PMED,"median "+f(PMED),[2,4],"left"]);
+  lines.forEach(([v,lab,dash,al])=>{g.save();g.setLineDash(dash);g.strokeStyle=C.fg;g.lineWidth=2.5;g.beginPath();g.moveTo(x(v),14);g.lineTo(x(v),h-B);g.stroke();g.restore();
+    g.fillStyle=C.fg;g.textAlign=al;g.textBaseline="top";g.fillText(lab,x(v)+(al==="left"?6:-6),h-B-22);});
+  cv.setAttribute("aria-label",`Dot plot of live seedling density in 16 plots at LP_H in 2026, from ${f(Math.min(...P))} to ${f(Math.max(...P))} seedlings per square metre. Mean ${f(PM)}, median ${f(PMED)}, SD ${f(PSD)}, SE ${f(PSE)}.`);
+}
+["c-mean","c-median","c-range","c-sd","c-se"].forEach(id=>$(id).addEventListener("change",renderSum));
+
+/* ===== 2. FEWER PLOTS ===== */
+const PSDpop=Math.sqrt(P.reduce((s,v)=>s+(v-PM)*(v-PM),0)/P.length);
+const F={k:4,last:null,means:[],hits:0};
+function crew(){const s=sample(P,F.k,true);const m=mean(s.v),e=se(s.v);F.means.push(m);if(Math.abs(m-PM)<=2*e)F.hits++;F.last=s;}
+function fAdd(n){for(let i=0;i<n;i++)crew();renderFewer();}
+function normpdf(v,m,s){return Math.exp(-0.5*((v-m)/s)**2)/(s*Math.sqrt(2*Math.PI));}
+function renderFewer(){
+  const s=F.last;$("f-m").textContent=s?f(mean(s.v)):"";$("f-sd").textContent=s?f(sd(s.v)):"";$("f-se").textContent=s?f(se(s.v)):"";
+  $("f-n").textContent=F.means.length.toLocaleString();$("f-sdm").textContent=F.means.length>1?f(sd(F.means)):"draw more samples";
+  $("f-pred").textContent=f(PSDpop/Math.sqrt(F.k));$("f-cov").textContent=F.means.length?`${(100*F.hits/F.means.length).toFixed(0)}% of samples`:"";
+  // crew strip
+  let cv=$("cv-crew"),o=prep(cv),g=o.g,w=o.w,h=o.h;const L=24,R=24,B=56;const x=lin(0,15,L,w-R);xAxis(g,x,h-B,"Seedlings/m²");
+  const cnt=new Array(16).fill(0);if(s)s.idx.forEach(i=>cnt[i]++);
+  const yd=h-B-30;[...P.keys()].sort((a,b)=>P[a]-P[b]).forEach((i,r)=>{const yy=yd+jitterY(r)*7;g.lineWidth=2;g.strokeStyle=cnt[i]?C.hi:C.muted;
+    g.beginPath();g.arc(x(P[i]),yy,7,0,2*Math.PI);if(cnt[i]){g.fillStyle=C.hi;g.fill();}g.stroke();
+    if(cnt[i]>1){g.fillStyle=C.fg;g.font="bold 13px "+C.font;g.textAlign="center";g.textBaseline="bottom";g.fillText("×"+cnt[i],x(P[i]),yy-9);g.font="15px "+C.font;}});
+  g.save();g.setLineDash([8,5]);g.strokeStyle=C.fg;g.lineWidth=1.5;g.beginPath();g.moveTo(x(PM),10);g.lineTo(x(PM),h-B);g.stroke();g.restore();
+  if(s){const b=bars(s.v);if(Number.isFinite(b.lo)){hbar(g,x,Math.max(0,b.lo),Math.min(15,b.hi),36,C.accent,6,10);}
+    g.fillStyle=C.fg;g.fillRect(x(b.m)-6,30,12,12);g.fillStyle=C.accent;g.font="bold 15px "+C.font;g.textAlign="left";g.textBaseline="bottom";
+    g.fillText(`sample mean ${f(b.m)} ± ${f(2*se(s.v))}`,Math.min(x(Math.min(15,b.hi))+8,w-R-210),26);g.font="15px "+C.font;}
+  g.fillStyle=C.muted;g.textAlign="left";g.textBaseline="top";g.fillText("all 16: "+f(PM),x(PM)+6,h-B-18);
+  cv.setAttribute("aria-label",s?`The latest sample has n = ${F.k} plots; its mean is ${f(mean(s.v))} with plus or minus 2 SE of ${f(2*se(s.v))}. The mean of all 16 plots is ${f(PM)}.`:"No sample drawn yet.");
+  // histogram
+  cv=$("cv-hist");o=prep(cv);g=o.g;w=o.w;h=o.h;const T=14,L2=60;const x2=lin(0,15,L2,w-R);const bw=0.25,nb=Math.round(15/bw),c=new Array(nb).fill(0);
+  F.means.forEach(v=>c[Math.min(nb-1,Math.max(0,Math.floor(v/bw)))]++);const k=F.means.length,sp=PSDpop/Math.sqrt(F.k);
+  const ymax=Math.max(4,...c,k*bw*normpdf(PM,PM,sp))*1.1;const y=lin(0,ymax,h-B,T);yAxis(g,y,L2,w-R,"Samples",4);
+  g.fillStyle=C.fill;g.strokeStyle=C.muted;g.lineWidth=1;c.forEach((n,i)=>{if(!n)return;const a=x2(i*bw),b2=x2((i+1)*bw);g.fillRect(a+.5,y(n),b2-a-1,y(0)-y(n));g.strokeRect(a+.5,y(n),b2-a-1,y(0)-y(n));});
+  if(k){g.strokeStyle=C.accent;g.lineWidth=3;g.beginPath();for(let i=0;i<=300;i++){const v=15*i/300,yy=y(k*bw*normpdf(v,PM,sp));i?g.lineTo(x2(v),yy):g.moveTo(x2(v),yy);}g.stroke();}
+  xAxis(g,x2,h-B,`Sample mean (seedlings/m²), n = ${F.k} plots per sample`);
+  g.save();g.setLineDash([8,5]);g.strokeStyle=C.fg;g.lineWidth=2;g.beginPath();g.moveTo(x2(PM),T);g.lineTo(x2(PM),h-B);g.stroke();g.restore();
+  cv.setAttribute("aria-label",`Histogram of ${k} sample means, n = ${F.k} plots per sample, with a normal curve centred on ${f(PM)} with SD ${f(sp)}.`);
+}
+seg("f-k",[2,4,8,16,32],4,v=>{F.k=v;F.means=[];F.hits=0;F.last=null;fAdd(1);});
+$("f-one").onclick=()=>fAdd(1);$("f-hund").onclick=()=>fAdd(100);$("f-thou").onclick=()=>fAdd(1000);
+$("f-clear").onclick=()=>{F.means=[];F.hits=0;F.last=null;renderFewer();};
+
+/* ===== 3. DETECT A CHANGE ===== */
+const YEARS=Object.keys(DATA.litter);
+const D={a:"2018",b:"2025",m:4,sa:null,sb:null,curve:[]};
+function maxM(){return Math.min(DATA.litter[D.a].length,DATA.litter[D.b].length);}
+function buildM(){const fs=$("d-m");fs.querySelectorAll("label").forEach(l=>l.remove());const mx=maxM();if(D.m>mx)D.m=mx;
+  const vals=[];for(let m=2;m<=mx;m++)vals.push(m);seg("d-m",vals,D.m,v=>{D.m=v;dDraw();});}
+function computeCurve(){const A=DATA.litter[D.a],B=DATA.litter[D.b];D.curve=[];
+  for(let m=2;m<=maxM();m++){let s=0;for(let i=0;i<1000;i++){if(separate(sample(A,m,false).v,sample(B,m,false).v))s++;}D.curve.push([m,s/10]);}}
+function dDraw(){D.sa=sample(DATA.litter[D.a],D.m,false);D.sb=sample(DATA.litter[D.b],D.m,false);renderChange();}
+function renderChange(){const A=DATA.litter[D.a],B=DATA.litter[D.b];
+  const full=separate(A,B),sub=separate(D.sa.v,D.sb.v);const rate=(D.curve.find(c=>c[0]===D.m)||[0,NaN])[1];
+  $("d-full").textContent=full?"Yes":"No";$("d-sub").textContent=sub?"Yes":"No";$("d-rate").textContent=`${f(rate,0)}% (with ${D.m} per year)`;
+  let cv=$("cv-cmp"),o=prep(cv),g=o.g,w=o.w,h=o.h;const L=70,R=16,T=14,Bm=60;
+  const all=[...A,...B];let ymax=Math.max(10,...all);[A,B,D.sa.v,D.sb.v].forEach(v=>{const b=bars(v);if(Number.isFinite(b.hi))ymax=Math.max(ymax,b.hi);});ymax*=1.08;
+  const y=lin(0,ymax,h-Bm,T);yAxis(g,y,L,w-R,"Fine litter cover (%)",5);
+  const groups=[[D.a,A,D.sa],[D.b,B,D.sb]];const xs=[L+(w-L-R)*0.28,L+(w-L-R)*0.72];
+  groups.forEach(([yr,v,s],gi)=>{const cx=xs[gi];const sel=new Set(s.idx);
+    v.forEach((val,i)=>{const px=cx-70+((i*37)%17)*3.2;g.lineWidth=2;g.strokeStyle=sel.has(i)?C.hi:C.muted;g.beginPath();g.arc(px,y(val),6,0,2*Math.PI);if(sel.has(i)){g.fillStyle=C.hi;g.fill();}g.stroke();});
+    const bf=bars(v);vbar(g,cx+20,y,Math.max(0,bf.lo),bf.hi,C.muted,8,2);g.fillStyle=C.muted;g.fillRect(cx+16,y(bf.m)-4,8,8);
+    const bs=bars(s.v);if(Number.isFinite(bs.lo))vbar(g,cx+48,y,Math.max(0,bs.lo),bs.hi,C.accent,11,4);g.fillStyle=C.fg;g.fillRect(cx+42,y(bs.m)-6,12,12);
+    g.fillStyle=C.fg;g.textAlign="center";g.textBaseline="top";g.font="bold 15px "+C.font;g.fillText(yr,cx,h-Bm+8);g.font="15px "+C.font;g.fillStyle=C.muted;
+    g.fillText(`all n = ${v.length} (grey) · subset n = ${s.v.length} (blue)`,cx,h-Bm+28);});
+  g.strokeStyle=C.line;g.beginPath();g.moveTo(L,h-Bm);g.lineTo(w-R,h-Bm);g.stroke();
+  cv.setAttribute("aria-label",`Fine litter cover at LP_H in ${D.a} and ${D.b}. All transects: means ${f(mean(A),1)} and ${f(mean(B),1)}; bars ${full?"separate":"overlap"}. Subset of ${D.m} per year: means ${f(mean(D.sa.v),1)} and ${f(mean(D.sb.v),1)}; bars ${sub?"separate":"overlap"}.`);
+  // curve
+  cv=$("cv-pow");o=prep(cv);g=o.g;w=o.w;h=o.h;const L2=70,B2=56;const mx=maxM();const x=lin(1.5,mx+0.5,L2,w-R),y2=lin(0,100,h-B2,T);
+  yAxis(g,y2,L2,w-R,"% of subsets",5);
+  g.strokeStyle=C.line;g.beginPath();g.moveTo(L2,h-B2);g.lineTo(w-R,h-B2);g.stroke();g.fillStyle=C.muted;g.textAlign="center";g.textBaseline="top";
+  D.curve.forEach(([m])=>g.fillText(m,x(m),h-B2+8));g.fillStyle=C.fg;g.fillText("Transects per year (n)",(L2+w-R)/2,h-B2+28);
+  g.strokeStyle=C.fg;g.lineWidth=2.5;g.beginPath();D.curve.forEach(([m,r],i)=>i?g.lineTo(x(m),y2(r)):g.moveTo(x(m),y2(r)));g.stroke();
+  D.curve.forEach(([m,r])=>{g.beginPath();g.arc(x(m),y2(r),m===D.m?9:6,0,2*Math.PI);g.fillStyle=m===D.m?C.accent:C.panel;g.fill();g.lineWidth=2;g.strokeStyle=m===D.m?C.accent:C.fg;g.stroke();});
+  cv.setAttribute("aria-label","Percent of 1,000 subsets in which the bars separate, by transects per year: "+D.curve.map(([m,r])=>`${m}: ${f(r,0)}%`).join(", ")+".");
+}
+function fillYears(){["d-a","d-b"].forEach(id=>{const s=$(id);YEARS.forEach(yv=>{const o=document.createElement("option");o.value=yv;o.textContent=`${yv} (n = ${DATA.litter[yv].length})`;s.append(o);});});
+  $("d-a").value=D.a;$("d-b").value=D.b;
+  ["d-a","d-b"].forEach(id=>$(id).addEventListener("change",()=>{D.a=$("d-a").value;D.b=$("d-b").value;buildM();computeCurve();dDraw();}));}
+$("d-draw").onclick=dDraw;
+
+/* ===== tabs, theme, resize ===== */
+const tabs=["summarize","fewer","change"],renders={summarize:renderSum,fewer:renderFewer,change:renderChange};let active="summarize";
+function show(id,focus){if(!tabs.includes(id))id="summarize";active=id;tabs.forEach(t=>{const b=$("t-"+t),p=$("p-"+t),on=t===id;b.setAttribute("aria-selected",on);b.tabIndex=on?0:-1;p.hidden=!on;});
+  if(focus)$("t-"+id).focus();try{history.replaceState(null,"","#"+id);}catch(e){}readColors();renders[id]();}
+tabs.forEach((t,i)=>{const b=$("t-"+t);b.addEventListener("click",()=>show(t));b.addEventListener("keydown",e=>{let j=null;if(e.key==="ArrowRight")j=(i+1)%tabs.length;if(e.key==="ArrowLeft")j=(i+tabs.length-1)%tabs.length;if(j!==null){e.preventDefault();show(tabs[j],true);}});});
+function redraw(){readColors();renders[active]();}
+let rt=null,lastW=0;window.addEventListener("resize",()=>{clearTimeout(rt);rt=setTimeout(()=>{const w=document.documentElement.clientWidth;if(w!==lastW){lastW=w;redraw();}},80);});
+window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change",redraw);
+new MutationObserver(redraw).observe(document.documentElement,{attributes:true,attributeFilter:["data-theme"]});
+
+readColors();fAdd(1);for(let i=0;i<29;i++)crew();fillYears();buildM();computeCurve();D.sa=sample(DATA.litter[D.a],D.m,false);D.sb=sample(DATA.litter[D.b],D.m,false);
+show((location.hash||"").replace("#","")||"summarize");
+})();
+</script>
+</body>
+</html>
