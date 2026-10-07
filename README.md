@@ -2,7 +2,7 @@
 
 An interactive exercise for **FORS 333: Fire Ecology** at the University of Montana. Students use field data they collected in the 2017 Lolo Peak Fire to see how to summarize a site, how sample size affects the mean and its standard error, and whether fewer transects can still detect change between years.
 
-**Open the exercise:** https://HigueraLab.github.io/lolo-peak-sampling-exercise/
+**Open the exercise:** https://higueralab.github.io/lolo-peak-sampling-exercise/
 
 ## What the exercise covers
 
@@ -37,7 +37,7 @@ The data were collected by FORS 333 students between 2018 and 2026. Tab 2 draws 
 
 ## How to cite
 
-Higuera, P. E. (2026). *Lolo Peak Sampling Exercise* [Interactive teaching tool]. FORS 333: Fire Ecology, University of Montana. https://github.com/YOUR-USERNAME/lolo-peak-sampling-exercise
+Higuera, P. E. (2026). *Lolo Peak Sampling Exercise* [Interactive teaching tool]. FORS 333: Fire Ecology, University of Montana. https://github.com/HigueraLab/lolo-peak-sampling-exercise
 
 ## Development note
 
